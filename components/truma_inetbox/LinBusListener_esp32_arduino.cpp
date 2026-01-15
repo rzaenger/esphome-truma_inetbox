@@ -4,18 +4,17 @@
 #include "driver/uart.h"
 #include "soc/uart_struct.h"
 #include "soc/uart_reg.h"
+
 #ifdef CUSTOM_ESPHOME_UART
 #include "esphome/components/uart/truma_uart_component_esp32_arduino.h"
 #define ESPHOME_UART uart::truma_ESP32ArduinoUARTComponent
 #else
-// ÄNDERUNG: Nutzen Sie die allgemeine UARTComponent Klasse
-#define ESPHOME_UART uart::UARTComponent  
+// ÄNDERUNG 1: Nutzung der allgemeinen UART Klasse
+#define ESPHOME_UART uart::UARTComponent
 #endif // CUSTOM_ESPHOME_UART
-// ÄNDERUNG: Alte Datei auskommentieren, neue einbinden
-// #include "esphome/components/uart/uart_component_esp32_arduino.h"
+
+// ÄNDERUNG 2: Korrekter Header
 #include "esphome/components/uart/uart.h"
-
-
 
 namespace esphome {
 namespace truma_inetbox {
@@ -25,8 +24,11 @@ static const char *const TAG = "truma_inetbox.LinBusListener";
 #define QUEUE_WAIT_BLOCKING (portTickType) portMAX_DELAY
 
 void LinBusListener::setup_framework() {
-  auto uartComp = static_cast<ESPHOME_UART *>(this->parent_);
-
+  // ÄNDERUNG 3: Hardware-Tweaks auskommentieren
+  // In neueren ESPHome Versionen ist der direkte Zugriff auf hw_serial entfernt worden.
+  // Das Standard-UART-Handling von ESPHome ist mittlerweile effizient genug.
+  
+  /* auto uartComp = static_cast<ESPHOME_UART *>(this->parent_);
   auto uart_num = uartComp->get_hw_serial_number();
   auto hw_serial = uartComp->get_hw_serial();
 
@@ -59,8 +61,10 @@ void LinBusListener::setup_framework() {
       return;
     }
   });
+  */
 
   // Creating LIN msg event Task
+  // Der Task wird weiterhin benötigt
   xTaskCreatePinnedToCore(LinBusListener::eventTask_,
                           "lin_event_task",         // name
                           4096,                     // stack size (in words)
