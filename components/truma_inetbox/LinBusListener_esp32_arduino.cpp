@@ -8,10 +8,14 @@
 #include "esphome/components/uart/truma_uart_component_esp32_arduino.h"
 #define ESPHOME_UART uart::truma_ESP32ArduinoUARTComponent
 #else
-#define ESPHOME_UART uart::ESP32ArduinoUARTComponent
+// ÄNDERUNG: Nutzen Sie die allgemeine UARTComponent Klasse
+#define ESPHOME_UART uart::UARTComponent  
 #endif // CUSTOM_ESPHOME_UART
+// ÄNDERUNG: Alte Datei auskommentieren, neue einbinden
 // #include "esphome/components/uart/uart_component_esp32_arduino.h"
 #include "esphome/components/uart/uart.h"
+
+
 
 namespace esphome {
 namespace truma_inetbox {
