@@ -9,11 +9,11 @@
 #include "esphome/components/uart/truma_uart_component_esp32_arduino.h"
 #define ESPHOME_UART uart::truma_ESP32ArduinoUARTComponent
 #else
-// ÄNDERUNG 1: Nutzung der allgemeinen UART Klasse
+// RZ: Use standard UART Component
 #define ESPHOME_UART uart::UARTComponent
 #endif // CUSTOM_ESPHOME_UART
 
-// ÄNDERUNG 2: Korrekter Header
+// RZ: Correct include for modern ESPHome
 #include "esphome/components/uart/uart.h"
 
 namespace esphome {
@@ -21,40 +21,35 @@ namespace truma_inetbox {
 
 static const char *const TAG = "truma_inetbox.LinBusListener";
 
-#define QUEUE_WAIT_BLOCKING (portTickType) portMAX_DELAY
+// RZ: Fix for FreeRTOS type name change
+#define QUEUE_WAIT_BLOCKING (TickType_t) portMAX_DELAY
 
 void LinBusListener::setup_framework() {
-  // ÄNDERUNG 3: Hardware-Tweaks auskommentieren
-  // In neueren ESPHome Versionen ist der direkte Zugriff auf hw_serial entfernt worden.
-  // Das Standard-UART-Handling von ESPHome ist mittlerweile effizient genug.
+  // Wir holen uns die Komponente nur, um sicherzugehen, dass sie da ist
+  auto uartComp = static_cast<ESPHOME_UART *>(this->parent_);
+
+  // -------------------------------------------------------------------------
+  // RZ FIX: Hardware-Interrupts und FIFO-Hacks entfernt
+  // Der folgende Code greift auf 'uart_num' und 'hw_serial' zu, die es in der
+  // aktuellen API nicht mehr gibt. ESPHome verwaltet den Buffer jetzt selbst.
+  // -------------------------------------------------------------------------
+
+  /* ALTE LOGIK ENTFERNT (verursacht Fehler):
   
-  /* auto uartComp = static_cast<ESPHOME_UART *>(this->parent_);
-  auto uart_num = uartComp->get_hw_serial_number();
-  auto hw_serial = uartComp->get_hw_serial();
-
-  // Extract from `uartSetFastReading` - Can't call it because I don't have access to `uart_t` object.
-
-  // Tweak the fifo settings so data is available as soon as the first byte is recieved.
-  // If not it will wait either until fifo is filled or a certain time has passed.
   uart_intr_config_t uart_intr;
-  uart_intr.intr_enable_mask =
-      UART_RXFIFO_FULL_INT_ENA_M | UART_RXFIFO_TOUT_INT_ENA_M;  // only these IRQs - no BREAK, PARITY or OVERFLOW
-  // UART_RXFIFO_FULL_INT_ENA_M | UART_RXFIFO_TOUT_INT_ENA_M | UART_FRM_ERR_INT_ENA_M |
-  // UART_RXFIFO_OVF_INT_ENA_M | UART_BRK_DET_INT_ENA_M | UART_PARITY_ERR_INT_ENA_M;
-  uart_intr.rxfifo_full_thresh =
-      1;  // UART_FULL_THRESH_DEFAULT,  //120 default!! aghh! need receive 120 chars before we see them
-  uart_intr.rx_timeout_thresh =
-      10;  // UART_TOUT_THRESH_DEFAULT,  //10 works well for my short messages I need send/receive
-  uart_intr.txfifo_empty_intr_thresh = 10;  // UART_EMPTY_THRESH_DEFAULT
+  uart_intr.intr_enable_mask = UART_RXFIFO_FULL_INT_ENA_M | UART_RXFIFO_TOUT_INT_ENA_M; 
+  uart_intr.rxfifo_full_thresh = 1;
+  uart_intr.rx_timeout_thresh = 10;
+  uart_intr.txfifo_empty_intr_thresh = 10;
+  
+  // FEHLER: uart_num existiert nicht mehr
   uart_intr_config(static_cast<uart_port_t>(uart_num), &uart_intr);
 
+  // FEHLER: hw_serial existiert nicht mehr
   hw_serial->onReceive([this]() { this->onReceive_(); }, false);
   hw_serial->onReceiveError([this](hardwareSerial_error_t val) {
-    // Ignore any data present in buffer
     this->clear_uart_buffer_();
     if (val == UART_BREAK_ERROR) {
-      // If the break is valid the `onReceive` is called first and the break is handeld. Therfore the expectation is
-      // that the state should be in waiting for `SYNC`.
       if (this->current_state_ != READ_STATE_SYNC) {
         this->current_state_ = READ_STATE_BREAK;
       }
@@ -63,8 +58,11 @@ void LinBusListener::setup_framework() {
   });
   */
 
+  // -------------------------------------------------------------------------
+  // Task Creation (Bleibt bestehen, das ist korrektes ESP32 FreeRTOS)
+  // -------------------------------------------------------------------------
+  
   // Creating LIN msg event Task
-  // Der Task wird weiterhin benötigt
   xTaskCreatePinnedToCore(LinBusListener::eventTask_,
                           "lin_event_task",         // name
                           4096,                     // stack size (in words)
